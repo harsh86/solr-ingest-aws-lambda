@@ -1,0 +1,38 @@
+{
+  "Records": [
+    {
+      "awsRegion": "us-west-2",
+      "eventName": "ObjectCreated:Put",
+      "eventSource": "aws:s3",
+      "eventTime": "2017-04-30T14:17:08.487Z",
+      "eventVersion": "2.0",
+      "requestParameters": {
+        "sourceIPAddress": "97.88.46.75"
+      },
+      "responseElements": {
+        "x-amz-id-2": "Oa8chlsWeh4e2s56qvSD27AYQSG1XG2H9w1ofBA5kbMa63W9SZGahPeh5MePyaDuVi4lv1G7UHc=",
+        "x-amz-request-id": "4760A736B11DD791"
+      },
+      "s3": {
+        "configurationId": "1b16ca34-b4c5-42d6-8193-fbc04aeb47fd",
+        "bucket": {
+          "name": "hj-aws-s3-search-metrics",
+          "ownerIdentity": {
+            "principalId": "A1EXWZTI95GZMG"
+          },
+          "arn": "arn:aws:s3:::hj-aws-s3-search-metrics"
+        },
+        "object": {
+          "key": "rules.json",
+          "size": 175,
+          "eTag": "174b8f54b94a862f27fdf5eadda3ce63",
+          "versionId": null
+        },
+        "s3SchemaVersion": "1.0"
+      },
+      "userIdentity": {
+        "principalId": "AWS:AIDAITRO2MQ4VN6GLLL7K"
+      }
+    }
+  ]
+}
