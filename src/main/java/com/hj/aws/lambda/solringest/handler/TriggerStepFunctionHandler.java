@@ -1,4 +1,4 @@
-package com.hj.aws.lambda.solringest;
+package com.hj.aws.lambda.solringest.handler;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.services.lambda.runtime.Context;

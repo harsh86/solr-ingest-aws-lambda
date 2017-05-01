@@ -8,6 +8,7 @@ import org.junit.Test;
 import com.amazonaws.services.lambda.runtime.Context;
 
 import com.amazonaws.services.lambda.runtime.events.S3Event;
+import com.hj.aws.lambda.solringest.handler.TriggerStepFunctionHandler;
 
 /**
  * A simple test harness for locally invoking your Lambda function handler.
