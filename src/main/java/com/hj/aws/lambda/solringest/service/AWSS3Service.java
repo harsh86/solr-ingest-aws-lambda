@@ -1,7 +1,6 @@
 package com.hj.aws.lambda.solringest.service;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -19,8 +18,6 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.util.json.Jackson;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class AWSS3Service {
@@ -30,7 +27,7 @@ public class AWSS3Service {
   private static final String CONTENT_TYPE = "application/json";
 
   public static <T> T getObject(String bucketName, String key, Class<T> clazz)
-      throws IOException, JsonParseException, JsonMappingException {
+      throws Exception {
     try {
       S3Object s3Object = s3Client.getObject(new GetObjectRequest(bucketName, key));
       InputStream objectData = s3Object.getObjectContent();
