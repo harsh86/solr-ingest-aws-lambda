@@ -86,12 +86,13 @@ public class DownloadMetricEventLambdaFunctionHandler implements RequestHandler<
     String ruleBucketKey =
         RuleEvent.toRuleBucketKey(incomingEvent.getTerm(), RuleType.SEARCH_METRIC);
     SearchMetricRuleEvent mergedRule = mergeRule(bucketName, ruleBucketKey, incomingEvent);
-
+    ruleBucketKey = mergedRule.isUpdated() ? "updated_" + ruleBucketKey : ruleBucketKey;
     return AWSS3Service.putObject(bucketName, ruleBucketKey, mergedRule);
   }
 
   /**
-   * Method merges skuid-score info onto existing metric rule for same term.
+   * Method merges skuid-score info onto existing metric rule for same term. TODO:// Need
+   * refactoring and re-thinking to solve conflict resolution if concurrent updates exists.
    * 
    * @throws IOException
    * @throws JsonMappingException
@@ -99,13 +100,27 @@ public class DownloadMetricEventLambdaFunctionHandler implements RequestHandler<
    */
   private static SearchMetricRuleEvent mergeRule(String bucketName, String key, Rule incomingRule)
       throws Exception {
-    SearchMetricRuleEvent mergedRule = AWSS3Service.getObject(S3BucketEnum.RULE_STAGING.bucketName,
-        key, SearchMetricRuleEvent.class);
-    if (mergedRule == null) {
-      mergedRule = new SearchMetricRuleEvent().forTerm(incomingRule.getTerm());
+    // If updated in this batch need to merge with updated
+    SearchMetricRuleEvent mergedRule =
+        AWSS3Service.getObject(bucketName, "updated_" + key, SearchMetricRuleEvent.class);
+    if (mergedRule != null) {
+      mergedRule.addSkuInfo(incomingRule);
+      mergedRule.updated(true);
+      AWSS3Service.deleteObjects(bucketName, "updated_" + key);
+      return mergedRule;
     }
-
-    mergedRule.addSkuInfo(incomingRule);
+    // Need to update aldready exisiting termRule
+    mergedRule = AWSS3Service.getObject(bucketName, key, SearchMetricRuleEvent.class);
+    if (mergedRule != null) {
+      mergedRule.addSkuInfo(incomingRule);
+      mergedRule.updated(true);
+      AWSS3Service.deleteObjects(bucketName, key);
+      return mergedRule;
+    }
+    // New termRule.
+    mergedRule = new SearchMetricRuleEvent().forTerm(incomingRule.getTerm())
+                                            .withSkuInfo(incomingRule)
+                                            .updated(false);
     return mergedRule;
   }
 

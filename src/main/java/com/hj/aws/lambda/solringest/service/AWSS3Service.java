@@ -4,14 +4,20 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.DeleteObjectRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
+import com.amazonaws.services.s3.model.ListObjectsRequest;
+import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.util.json.Jackson;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -45,6 +51,26 @@ public class AWSS3Service {
     }
   }
 
+  public static List<S3ObjectSummary> listObjects(String bucketName) {
+    return listObjects(bucketName, null);
+  }
+
+  public static List<S3ObjectSummary> listObjects(String bucketName, String prefix) {
+    List<S3ObjectSummary> s3ObjectSummaries = new ArrayList<S3ObjectSummary>();
+    ObjectListing objectListing;
+    do {
+      ListObjectsRequest listObjectsRequest = toListObjectRequest(bucketName, prefix);
+      objectListing = s3Client.listObjects(listObjectsRequest);
+      s3ObjectSummaries.addAll(objectListing.getObjectSummaries());
+      listObjectsRequest.setMarker(objectListing.getNextMarker());
+    } while (objectListing.isTruncated());
+    return s3ObjectSummaries;
+  }
+
+  public static void deleteObjects(String bucketName, String key) {
+    s3Client.deleteObject(new DeleteObjectRequest(bucketName, key));
+  }
+
 
 
   private static PutObjectRequest toPutobjectRequest(String bucketName, String key,
@@ -55,5 +81,13 @@ public class AWSS3Service {
     metadata.setContentType(CONTENT_TYPE);
     metadata.setContentLength(fileContentBytes.length);
     return new PutObjectRequest(bucketName, key, fileInputStream, metadata);
+  }
+
+  private static ListObjectsRequest toListObjectRequest(String bucketName, String prefix) {
+    ListObjectsRequest objectsRequest = new ListObjectsRequest().withBucketName(bucketName);
+    if (prefix == null) {
+      return objectsRequest;
+    }
+    return objectsRequest.withPrefix(prefix);
   }
 }
