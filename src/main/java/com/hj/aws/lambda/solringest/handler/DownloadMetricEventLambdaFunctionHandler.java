@@ -1,6 +1,9 @@
 package com.hj.aws.lambda.solringest.handler;
 
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -25,19 +28,25 @@ public class DownloadMetricEventLambdaFunctionHandler implements RequestHandler<
     try {
       context.getLogger()
              .log("Input: " + input);
-      saveSearchMetricEvents(input, context);
+      //TODO:: Check if ML can send a batchId
+      String batchId = UUID.randomUUID()
+                           .toString();
+      return saveSearchMetricEvents(input, context, batchId);
     } catch (final Exception e) {
       context.getLogger()
              .log("Failed to parse input: " + input);
       throw new RuntimeException(e);
     }
-    return "OK";
   }
 
   /**
    * Function which transforms and saves S3Event as RuleEvent
+   * 
+   * @throws Exception
    */
-  private void saveSearchMetricEvents(S3Event input, Context context) {
+  private String saveSearchMetricEvents(S3Event input, Context context, String batchId)
+      throws Exception {
+    Set<String> changeSet = new HashSet<String>();
     input.getRecords()
          .stream()
          .flatMap(record -> {
@@ -53,11 +62,12 @@ public class DownloadMetricEventLambdaFunctionHandler implements RequestHandler<
              context.getLogger()
                     .log("Saving rule for term: " + rule.getTerm() + " and for skuid : "
                         + rule.getSkuid() + " with score: " + rule.getScore());
-             saveMetricRule(rule);
+             changeSet.add(saveMetricRule(rule));
            } catch (Exception e) {
              throw new RuntimeException(e);
            }
          });
+    return saveChangeSet(changeSet, batchId);
   }
 
   /**
@@ -81,13 +91,13 @@ public class DownloadMetricEventLambdaFunctionHandler implements RequestHandler<
    * Persists incoming searchMetric Events
    */
 
-  private boolean saveMetricRule(Rule incomingEvent) throws Exception {
+  private String saveMetricRule(Rule incomingEvent) throws Exception {
     String bucketName = S3BucketEnum.RULE_STAGING.bucketName;
     String ruleBucketKey =
         RuleEvent.toRuleBucketKey(incomingEvent.getTerm(), RuleType.SEARCH_METRIC);
     SearchMetricRuleEvent mergedRule = mergeRule(bucketName, ruleBucketKey, incomingEvent);
-    ruleBucketKey = mergedRule.isUpdated() ? "updated_" + ruleBucketKey : ruleBucketKey;
-    return AWSS3Service.putObject(bucketName, ruleBucketKey, mergedRule);
+    AWSS3Service.putObject(bucketName, ruleBucketKey, mergedRule);
+    return ruleBucketKey;
   }
 
   /**
@@ -100,28 +110,32 @@ public class DownloadMetricEventLambdaFunctionHandler implements RequestHandler<
    */
   private static SearchMetricRuleEvent mergeRule(String bucketName, String key, Rule incomingRule)
       throws Exception {
-    // If updated in this batch need to merge with updated
-    SearchMetricRuleEvent mergedRule =
-        AWSS3Service.getObject(bucketName, "updated_" + key, SearchMetricRuleEvent.class);
-    if (mergedRule != null) {
-      mergedRule.addSkuInfo(incomingRule);
-      mergedRule.updated(true);
-      AWSS3Service.deleteObjects(bucketName, "updated_" + key);
-      return mergedRule;
-    }
+
     // Need to update aldready exisiting termRule
-    mergedRule = AWSS3Service.getObject(bucketName, key, SearchMetricRuleEvent.class);
+    SearchMetricRuleEvent mergedRule =
+        AWSS3Service.getObject(bucketName, key, SearchMetricRuleEvent.class);
     if (mergedRule != null) {
       mergedRule.addSkuInfo(incomingRule);
-      mergedRule.updated(true);
-      AWSS3Service.deleteObjects(bucketName, key);
       return mergedRule;
     }
     // New termRule.
     mergedRule = new SearchMetricRuleEvent().forTerm(incomingRule.getTerm())
-                                            .withSkuInfo(incomingRule)
-                                            .updated(false);
+                                            .withSkuInfo(incomingRule);
     return mergedRule;
+  }
+
+  /**
+   * Persists changeSet: terms modified or added as part of this batch.
+   */
+
+  private String saveChangeSet(Set<String> changeSet, String batchId) throws Exception {
+    String bucketName = S3BucketEnum.RULE_STAGING.bucketName;
+    String ruleBucketKey = new StringBuilder("changeset_").append(RuleType.SEARCH_METRIC.name())
+                                                          .append("_")
+                                                          .append(batchId)
+                                                          .toString();
+    AWSS3Service.putObject(bucketName, ruleBucketKey, changeSet);
+    return ruleBucketKey;
   }
 
 }

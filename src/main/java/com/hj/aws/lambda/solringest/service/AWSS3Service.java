@@ -38,11 +38,19 @@ public class AWSS3Service {
     }
   }
 
-  public static boolean putObject(String bucketName, String key, Object object)
+  public static void putObject(String bucketName, String key, String content)
+      throws AmazonServiceException {
+    try {
+      s3Client.putObject(toPutobjectRequest(bucketName, key, content));
+    } catch (AmazonServiceException e) {
+      throw e;
+    }
+  }
+  
+  public static void putObject(String bucketName, String key, Object object)
       throws AmazonServiceException {
     try {
       s3Client.putObject(toPutobjectRequest(bucketName, key, Jackson.toJsonString(object)));
-      return true;
     } catch (AmazonServiceException e) {
       throw e;
     }
@@ -63,12 +71,6 @@ public class AWSS3Service {
     } while (objectListing.isTruncated());
     return s3ObjectSummaries;
   }
-
-  public static void deleteObjects(String bucketName, String key) {
-    s3Client.deleteObject(new DeleteObjectRequest(bucketName, key));
-  }
-
-
 
   private static PutObjectRequest toPutobjectRequest(String bucketName, String key,
       String content) {

@@ -12,13 +12,13 @@ import com.amazonaws.services.lambda.runtime.events.S3Event;
 /**
  * A simple test harness for locally invoking your Lambda function handler.
  */
-public class TransformRuleToSolrDocHandlerTest {
+public class SolrIndexerLambdaHandlerTest {
 
-    private static String input;
+    private static S3Event input;
 
     @BeforeClass
     public static void createInput() throws IOException {
-        input = "changeset_SEARCH_METRIC_9c6a8289-2177-4224-8845-4c6a6a611c42";
+        input = TestUtils.parse("s3-event.put.json", S3Event.class);
     }
 
     private Context createContext() {
@@ -31,8 +31,8 @@ public class TransformRuleToSolrDocHandlerTest {
     }
 
     @Test
-    public void testTransformRuleToSolrDocHandler() {
-        TransformRuleToSolrDocHandler handler = new TransformRuleToSolrDocHandler();
+    public void testSolrIndexerLambdaHandler() {
+        SolrIndexerLambdaHandler handler = new SolrIndexerLambdaHandler();
         Context ctx = createContext();
 
         Object output = handler.handleRequest(input, ctx);

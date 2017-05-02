@@ -1,4 +1,4 @@
-package com.hj.aws.lambda.solringest;
+package com.hj.aws.lambda.solringest.handler;
 
 import java.io.IOException;
 
